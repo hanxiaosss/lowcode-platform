@@ -2,11 +2,13 @@ import Icon from '@/components/icon'
 import useQuery from '@/hooks/useQuery'
 import { useStrapiRequest } from '@/lib/request'
 import { DownOutlined, SettingOutlined } from '@ant-design/icons'
-import { TreeItem } from '@atlaskit/tree'
+import { TreeData, TreeItem } from '@atlaskit/tree'
+import { useMemoizedFn } from 'ahooks'
 import { Button, Checkbox, Dropdown, Form, Input, MenuProps, message, Modal, Tooltip } from 'antd'
 import produce from 'immer'
-import { FC, useCallback, useMemo, useState } from 'react'
+import { FC, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
+import { createStore } from 'zustand/vanilla'
 
 const onMenuClick: MenuProps['onClick'] = (e) => {
   console.log('click', e)
@@ -28,10 +30,12 @@ const pageActions = [
 const PageView: FC<{
   activeNav?: TreeItem
   setActiveNav: React.Dispatch<React.SetStateAction<TreeItem | undefined>>
-}> = ({ activeNav, setActiveNav }) => {
+  tree?: TreeData
+}> = ({ activeNav, setActiveNav, tree }) => {
   const { id } = useParams()
   const query = useQuery()
   const [open, setOpen] = useState(false)
+  const refIframe = useRef<HTMLIFrameElement>(null)
 
   const pageType = activeNav?.data.type as 'PAGE' | 'LINK'
   const [form] = Form.useForm()
@@ -73,21 +77,76 @@ const PageView: FC<{
     }
   }, [form, updateRouteApi, setActiveNav])
 
+  const [routeParams, setRouteParams] = useState({})
+
+  const getRouteParams = useMemoizedFn(() => {
+    const cache = routeParams
+    setRouteParams({})
+    return cache
+  })
+
   const iframeUrl = useMemo(() => {
-    if (activeNav!.data.type === 'PAGE') {
-      return `${location.origin}/app/page?navUuid=${activeNav?.id}&versionId=${
-        activeNav?.data.version?.id ?? ''
-      }&tab=${query.get('tab')}`
-    } else if (activeNav!.data.type === 'LINK') {
-      return activeNav!.data.url
+    if (activeNav) {
+      if (activeNav.data.type === 'PAGE') {
+        return `${location.origin}/app/page?${new URLSearchParams({
+          navUuid: String(activeNav.id ?? ''),
+          versionId: activeNav.data.version?.id ?? '',
+          tab: query.get('tab')!,
+          ...getRouteParams()
+        }).toString()}`
+      } else if (activeNav.data.type === 'LINK') {
+        return activeNav.data.url
+      }
     }
-  }, [activeNav, query])
+  }, [activeNav, query, getRouteParams])
+
+  const store = useMemo(() => {
+    return createStore(() => ({}))
+  }, [])
+
+  const getMessageHandler = useMemoizedFn(({ source, payload }) => {
+    if (source === 'page-preview') {
+      console.log('Message from iframe:', source, payload)
+      const { navUuid, ...rest } = payload
+      const nextNav = tree?.items?.[navUuid]
+      setRouteParams(rest)
+      nextNav && setActiveNav(nextNav)
+    } else if (source === 'store-update') {
+      console.log('Message from iframe:', source, payload)
+      const { data } = payload
+      store.setState(data || {})
+    } else if (source === 'store-get') {
+      console.log('Message from iframe:', source, payload)
+      refIframe.current?.contentWindow?.postMessage(
+        {
+          source: 'store-sync',
+          payload: {
+            data: store.getState() || {}
+          }
+        },
+        location.origin
+      )
+    }
+  })
+
+  useEffect(() => {
+    function messageHandler(event: MessageEvent) {
+      if (event.origin === location.origin) {
+        const { source, payload = {} } = event.data || {}
+        getMessageHandler({ source, payload })
+      }
+    }
+    window.addEventListener('message', messageHandler)
+    return () => {
+      window.removeEventListener('message', messageHandler)
+    }
+  }, [getMessageHandler])
 
   return (
     <div className='flex flex-col flex-auto'>
       <div className='bg-c_white p-[23px_24px] h-[74px] flex items-center justify-between flex-none'>
         <div className='text-[16px] min-w-[310px] w-[calc(100%-310px)] overflow-hidden text-ellipsis whitespace-nowrap'>
-          {activeNav!.data.title}
+          {activeNav?.data?.title || ''}
         </div>
         <div>
           <Tooltip
@@ -102,7 +161,7 @@ const PageView: FC<{
                 menu={{ items: pageActions, onClick: onMenuClick }}
                 icon={<DownOutlined />}
                 onClick={() => {
-                  location.href = `/pageDesigner?navUuid=${activeNav!.id}&projectId=${id}`
+                  location.href = `/pageDesigner?navUuid=${activeNav?.id}&projectId=${id}`
                 }}
               >
                 编辑自定义页
@@ -117,7 +176,7 @@ const PageView: FC<{
       </div>
       <div className='h-[calc(100%-74px)] p-[16px] overflow-hidden'>
         <div className='w-full h-full'>
-          <iframe src={iframeUrl} className='w-full h-full' key={iframeUrl} />
+          <iframe src={iframeUrl} className='w-full h-full' key={iframeUrl} ref={refIframe} />
         </div>
       </div>
       <Modal

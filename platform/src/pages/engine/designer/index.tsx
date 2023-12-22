@@ -6,7 +6,10 @@ import { message, Spin } from 'antd'
 import React, { useEffect, useRef, useState } from 'react'
 import createAxiosHandler from '../datasource-axios-handler'
 import registerPlugins from './plugin'
+import { createStore } from 'zustand/vanilla'
+import { parseQuery } from '../utils'
 
+const store = createStore(() => ({}))
 async function authLoader() {
   const TokenUserInfo = getLoginState()
   if (TokenUserInfo.loginToken) {
@@ -67,6 +70,7 @@ const Designer: React.FC = () => {
     }
   )
 
+
   const init = useMemoizedFn(() => {
     async function initPlugins(projectResult: any, pageVersionsResult: any, routeResult: any) {
       try {
@@ -89,6 +93,7 @@ const Designer: React.FC = () => {
            * 设置所有属性支持变量配置，默认值：false
            */
           supportVariableGlobally: true,
+          // enableWorkspaceMode: true,
           /**
            * 设置 simulator 相关的 url，默认值：undefined
            */
@@ -102,22 +107,31 @@ const Designer: React.FC = () => {
            * 数据源引擎的请求处理器映射
            */
           requestHandlersMap: {
-            axios: createAxiosHandler()
+            axios: createAxiosHandler({
+              store
+            })
           },
           /**
            * 工具类扩展
            */
           appHelper: {
             utils: {
-              // xxx: () => {
-              //   console.log('123')
-              // }
+              navigateTo() {
+                message.info('编辑器中不支持跳转')
+              },
+              parseQuery
             },
             /**
              * 全局常量
              */
-            constants: {}
+            constants: {
+              store
+            }
           }
+          // focusNodeSelector: (rootNode: any) => {
+          //   console.log(rootNode)
+          //   return rootNode
+          // }
         })
 
         await plugins.init()

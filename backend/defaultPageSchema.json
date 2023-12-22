@@ -1,0 +1,62 @@
+{
+  "id": 0,
+  "description": "默认",
+  "schema": {
+    "i18n": {},
+    "version": "1.0.0",
+    "componentsMap": [
+      {
+        "devMode": "lowCode",
+        "componentName": "Page"
+      }
+    ],
+    "componentsTree": [
+      {
+        "componentName": "Page",
+        "id": "node_dockcviv8fo1",
+        "props": {
+          "ref": "outerView",
+          "style": {
+            "height": "100%"
+          }
+        },
+        "docId": "doclaqkk3b9",
+        "fileName": "/",
+        "dataSource": {
+          "list": []
+        },
+        "state": {},
+        "lifeCycles": {
+          "componentDidMount": {
+            "type": "JSFunction",
+            "value": "function componentDidMount() {\n  console.log('did mount');\n  this.constants.store.subscribe(() => {\n    this.forceUpdate()\n  });\n}",
+            "source": "function componentDidMount() {\n  console.log('did mount');\n  this.constants.store.subscribe(() => {\n    this.forceUpdate()\n  });\n}"
+          },
+          "componentWillUnmount": {
+            "type": "JSFunction",
+            "value": "function componentWillUnmount() {\n  console.log('will unmount');\n}",
+            "source": "function componentWillUnmount() {\n  console.log('will unmount');\n}"
+          }
+        },
+        "originCode": "class LowcodeComponent extends Component {\n  state = {}\n  componentDidMount() {\n    console.log('did mount');\n    this.constants.store.subscribe(() => { this.forceUpdate() });\n  }\n  componentWillUnmount() {\n    console.log('will unmount');\n  }\n  setStore(...rest) {\n    return this.constants.store.setState(...rest);\n  }\n  getStore() {\n    return this.constants.store.getState()\n  }\n}",
+        "methods": {
+          "getStore": {
+            "type": "JSFunction",
+            "value": "function getStore() {\n  return this.constants.store.getState();\n}",
+            "source": "function getStore() {\n  return this.constants.store.getState();\n}"
+          },
+          "setStore": {
+            "type": "JSFunction",
+            "value": "function setStore(...rest) {\n  return this.constants.store.setState(...rest);\n}",
+            "source": "function setStore(...rest) {\n  return this.constants.store.setState(...rest);\n}"
+          }
+        },
+        "hidden": false,
+        "title": "",
+        "isLocked": false,
+        "condition": true,
+        "conditionGroup": ""
+      }
+    ]
+  }
+}
